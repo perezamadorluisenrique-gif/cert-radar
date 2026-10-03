@@ -2,7 +2,7 @@
 
 Enter a domain and see every public TLS certificate issued for it, which ones are still renewed by hand, and how much renewal work the new validity caps will add.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fperezamadorluisenrique-gif%2Fcert-radar&project-name=cert-radar)
+**Live app:** https://perezamadorluisenrique-gif.github.io/cert-radar/ · [demo university](https://perezamadorluisenrique-gif.github.io/cert-radar/?d=demo)
 
 ## Why
 
@@ -28,7 +28,7 @@ A process that used to happen once a year happens about nine times a year. Autom
    Every row shows the reasons on hover.
 3. **Forecast.** Projects manual renewals per year under the 200, 100 and 47-day caps. Unclear lineages count as half, so the headline number is an estimate rather than a worst case.
 4. **Flag.** Hand-renewed certs expiring in the next 30 days, and recently expired lineages that nobody replaced.
-5. **Verify live.** "Check live hosts" runs a TLS handshake against each host on port 443 (serverless function) and shows the certificate actually served, its expiry, whether it chains to a trusted root, and whether it differs from the newest one in CT.
+5. **Verify live** (when running with the Node server). "Check live hosts" runs a TLS handshake against each host on port 443 and shows the certificate actually served, its expiry, whether it chains to a trusted root, and whether it differs from the newest one in CT.
 6. **Assign and remind.** An owner field per certificate ("who renews this?", saved in the browser), CSV export, and an `.ics` calendar file with a reminder 14 days before each non-automated expiry.
 
 A built-in demo (`stateuniversity.example`, fictional, under the reserved `.example` TLD) works offline, so a live demo never depends on crt.sh being fast.
@@ -44,8 +44,8 @@ No dependencies. Open `http://localhost:3000/?d=demo` for the demo, or `?d=examp
 
 ## Deploy
 
-- **Vercel (recommended).** Click the button above, or `vercel deploy`. `public/` is served as static files and `api/ct.js` and `api/tls.js` become serverless functions. Live TLS checks need this.
-- **Any static host (GitHub Pages, Netlify, S3).** Publish the `public/` folder. With no `api/`, the page queries crt.sh straight from the browser and the live-check button explains that it needs the API.
+- **GitHub Pages (how the live app is hosted).** `.github/workflows/pages.yml` runs the tests and publishes `public/` on every push to `main`. One-time setup: Settings → Pages → Source: **GitHub Actions**. On a static host the page queries crt.sh (then Cert Spotter) straight from the browser. Live TLS checks are off, since browsers can't open raw TLS connections.
+- **Any Node or serverless host.** `api/ct.js` and `api/tls.js` are plain `(req, res)` handlers. `npm run dev` serves everything, and `vercel deploy` works as-is via `vercel.json`. With the API present, CT lookups are cached server-side and live TLS checks are on.
 - **Single file.** `node scripts/build-demo.js` writes `dist/cert-radar-demo.html`, a self-contained demo page with the sample inlined.
 
 ## Layout

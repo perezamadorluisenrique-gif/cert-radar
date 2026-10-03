@@ -3,7 +3,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const r = (p) => readFileSync(new URL('../public/' + p, import.meta.url), 'utf8');
-const appUrl = process.env.APP_URL || 'https://github.com/perezamadorluisenrique-gif/cert-radar';
+const appUrl = process.env.APP_URL || 'https://perezamadorluisenrique-gif.github.io/cert-radar/';
 const lib = r('lib.js').replace(/^export /gm, '');
 const app = r('app.js').replace(/^import .*$/m, '').replace(/^const DAY = .*$/m, '');
 const sample = r('sample.json');

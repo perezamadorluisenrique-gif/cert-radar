@@ -69,12 +69,28 @@ async function lookupCT(domain) {
   const q = encodeURIComponent('%.' + domain);
   try {
     return { source: 'crt.sh', entries: await fetchJSON(`https://crt.sh/?q=${q}&output=json&deduplicate=Y`, 45000) };
-  } catch {
+  } catch {}
+  try {
     return {
       source: 'crt.sh (unexpired only)',
       entries: await fetchJSON(`https://crt.sh/?q=${q}&output=json&exclude=expired&deduplicate=Y`, 30000),
     };
-  }
+  } catch {}
+  const items = await fetchJSON(
+    `https://api.certspotter.com/v1/issuances?domain=${encodeURIComponent(domain)}&include_subdomains=true&expand=dns_names&expand=issuer`,
+    20000,
+  );
+  return {
+    source: 'Cert Spotter (unexpired only)',
+    entries: items.map((i) => ({
+      id: i.id,
+      issuer_name: (i.issuer && (i.issuer.name || i.issuer.friendly_name)) || '',
+      name_value: (i.dns_names || []).join('\n'),
+      not_before: i.not_before,
+      not_after: i.not_after,
+      serial_number: i.cert_sha256 || i.id,
+    })),
+  };
 }
 
 // ---------- scan ----------
@@ -165,6 +181,8 @@ function render() {
     .map(([k, v, warn]) => `<div class="tile${warn ? ' warn' : ''}"><div class="v">${v}</div><div class="k">${k}</div></div>`)
     .join('');
 
+  // Without the Node API (static hosting) browsers can't do TLS handshakes, so hide the button.
+  $('live').hidden = Boolean(EMBED) || state.apiAvailable === false;
   renderForecast();
   renderTimeline();
   renderAttention();
@@ -352,7 +370,7 @@ async function checkLive() {
   }
   btn.disabled = false;
   if (failedApi) {
-    note.textContent = 'Live TLS checks need the serverless API, which this static copy does not have. Deploy to Vercel (see README) to enable them.';
+    note.textContent = 'Live TLS checks need a small server, because browsers cannot open raw TLS connections. This copy runs without one, so it shows what Certificate Transparency logs say instead. Run it locally with npm run dev to use live checks.';
   } else {
     const vals = hosts.map((h) => state.live[h]).filter((x) => x && x.ok);
     const mismatched = r.active.filter((l) => {
