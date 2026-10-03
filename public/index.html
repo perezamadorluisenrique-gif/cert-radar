@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>47-Day Cert Radar</title>
+  <meta name="description" content="Find every public TLS certificate for your domain, spot the ones renewed by hand, and see how much work the 200, 100 and 47-day validity caps will add." />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%230f766e' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%230f766e' stroke-width='3'/%3E%3Cpath d='M16 16 L27 7' stroke='%23dc2626' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <div class="brand">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14"/><circle cx="16" cy="16" r="7"/><path d="M16 16 L27 7"/></svg>
+        <span>47-Day Cert Radar</span>
+      </div>
+      <a class="gh" href="https://github.com/perezamadorluisenrique-gif/cert-radar" target="_blank" rel="noopener">Source</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>Every TLS certificate you own, and when each one breaks.</h1>
+      <p class="lede">
+        Certificate lifetimes drop to <b>200 days</b> (now), <b>100 days</b> on March 15, 2027 and
+        <b>47 days</b> on March 15, 2029. Enter a domain to pull its history from public Certificate
+        Transparency logs, find the certificates someone still renews by hand, and see what the new caps cost you.
+      </p>
+      <form id="scan" class="scan" autocomplete="off">
+        <label class="sr" for="domain">Domain</label>
+        <input id="domain" name="domain" placeholder="yourcompany.com" inputmode="url" spellcheck="false" required />
+        <button type="submit" id="go">Scan</button>
+      </form>
+      <p class="hint">No sign-up. Nothing is stored. <button type="button" class="link" id="demo">Try the demo university</button></p>
+      <ol id="progress" class="progress" hidden></ol>
+      <p id="error" class="error" role="alert" hidden></p>
+    </section>
+
+    <section id="results" hidden>
+      <div class="headline card">
+        <div>
+          <p class="kicker" id="hl-domain"></p>
+          <p class="big"><span id="hl-num">0</span></p>
+          <p class="big-label">manual renewals a year by 2029</p>
+        </div>
+        <p class="hl-text" id="hl-text"></p>
+      </div>
+
+      <div class="tiles" id="tiles"></div>
+
+      <div class="grid2">
+        <div class="card">
+          <h2>Manual renewals per year</h2>
+          <p class="sub">Certificates that look hand-renewed, under each step of CA/B Forum Ballot SC-081v3.</p>
+          <div id="forecast" class="chart"></div>
+        </div>
+        <div class="card">
+          <h2>Next 12 months</h2>
+          <p class="sub">When each live certificate expires. Red ones renew by hand.</p>
+          <div id="timeline" class="chart"></div>
+        </div>
+      </div>
+
+      <div class="card" id="attention-card">
+        <h2>Needs attention</h2>
+        <p class="sub">Hand-renewed certificates expiring within 30 days, and recently expired ones nobody replaced.</p>
+        <ul id="attention" class="attention"></ul>
+      </div>
+
+      <div class="card">
+        <div class="table-head">
+          <div>
+            <h2>Certificate inventory</h2>
+            <p class="sub" id="inv-sub"></p>
+          </div>
+          <div class="actions">
+            <button type="button" id="live" class="secondary">Check live hosts</button>
+            <button type="button" id="csv" class="secondary">Export CSV</button>
+            <button type="button" id="ics" class="secondary">Calendar reminders</button>
+          </div>
+        </div>
+        <div class="filters">
+          <div class="seg" role="tablist" id="seg">
+            <button type="button" data-f="manual" class="on">Probably manual</button>
+            <button type="button" data-f="unclear">Unclear</button>
+            <button type="button" data-f="automated">Automated</button>
+            <button type="button" data-f="expired">Expired</button>
+            <button type="button" data-f="all">All</button>
+          </div>
+          <input id="search" type="search" placeholder="Filter by name or CA" />
+        </div>
+        <p id="live-note" class="note" hidden></p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Certificate</th>
+                <th>CA</th>
+                <th>Renewal</th>
+                <th>Expires</th>
+                <th title="Renewals a year under the 47-day cap">2029/yr</th>
+                <th>Live</th>
+                <th>Owner</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <p class="note">Owners are saved in this browser only and included in the CSV and calendar exports.</p>
+      </div>
+    </section>
+
+    <section class="about">
+      <h2>How it works</h2>
+      <div class="grid3">
+        <div>
+          <h3>Discover</h3>
+          <p>Every publicly trusted certificate is logged in Certificate Transparency. Cert Radar queries <a href="https://crt.sh" target="_blank" rel="noopener">crt.sh</a> for the domain and all subdomains, merges precertificate duplicates, and groups renewals of the same name set into one lineage.</p>
+        </div>
+        <div>
+          <h3>Classify</h3>
+          <p>A lineage looks <b>manual</b> when it comes from a commercial CA with no ACME history, runs close to the old 398-day maximum, or renews on an irregular rhythm. Let's Encrypt, ZeroSSL, Google Trust Services, Amazon and Cloudflare certs count as automated. These are heuristics; the reasons are shown on every row.</p>
+        </div>
+        <div>
+          <h3>Forecast</h3>
+          <p>Each manual lineage is projected under the 200, 100 and 47-day caps, assuming renewal about a week before expiry. Unclear lineages count as half. Live checks hand-shake each host to confirm which certificate is actually served.</p>
+        </div>
+      </div>
+      <p class="note">Schedule: CA/Browser Forum Ballot SC-081v3 (April 2025). 200 days from March 15, 2026; 100 days from March 15, 2027; 47 days from March 15, 2029. Domain validation reuse drops to 10 days in 2029.</p>
+    </section>
+  </main>
+
+  <footer class="wrap foot">Built for the 47-day certificate transition. Data from public CT logs; results are estimates.</footer>
+
+  <template id="row-tpl">
+    <tr>
+      <td class="name"><span class="primary"></span><span class="more"></span></td>
+      <td class="ca"></td>
+      <td class="auto"><span class="badge"></span></td>
+      <td class="exp"><span class="date"></span><span class="left"></span></td>
+      <td class="num"></td>
+      <td class="livecell"></td>
+      <td><input class="owner" placeholder="Who renews this?" /></td>
+    </tr>
+  </template>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

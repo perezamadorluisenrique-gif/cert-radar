@@ -1,0 +1,13 @@
+{
+  "name": "cert-radar",
+  "version": "0.1.0",
+  "description": "Find every public TLS certificate for a domain and see when each one breaks under the 200/100/47-day validity caps.",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "dev": "node server.js",
+    "test": "node --test test/*.test.js"
+  }
+}
