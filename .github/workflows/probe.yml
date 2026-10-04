@@ -10,21 +10,26 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: crt.sh CORS and timing
+      - name: Probe
+        shell: bash
         run: |
-          for q in "%25.letsencrypt.org" "%25.wikipedia.org"; do
-            echo "=== crt.sh $q"
-            curl -s -m 60 -o /tmp/out.json -D - -w "time=%{time_total}s size=%{size_download}\n" \
-              -H "Origin: https://perezamadorluisenrique-gif.github.io" \
-              "https://crt.sh/?q=$q&output=json&exclude=expired&deduplicate=Y" | grep -iE "^HTTP|access-control|content-type|time=" || true
-            head -c 300 /tmp/out.json; echo
-          done
-      - name: Cert Spotter CORS
-        run: |
-          curl -s -m 30 -o /tmp/cs.json -D - -w "time=%{time_total}s\n" \
-            -H "Origin: https://perezamadorluisenrique-gif.github.io" \
-            "https://api.certspotter.com/v1/issuances?domain=letsencrypt.org&include_subdomains=true&expand=dns_names&expand=issuer" | grep -iE "^HTTP|access-control|content-type|time=|ratelimit|retry" || true
-          head -c 600 /tmp/cs.json; echo
-      - name: crt.sh preflight-free full history timing
-        run: |
-          curl -s -m 90 -o /tmp/full.json -w "time=%{time_total}s size=%{size_download} code=%{http_code}\n" "https://crt.sh/?q=%25.letsencrypt.org&output=json&deduplicate=Y" || true
+          set +e
+          O="Origin: https://perezamadorluisenrique-gif.github.io"
+          probe() { # label url timeout
+            echo "=== $1"
+            curl -s -m "$3" -o /tmp/o -D /tmp/h -H "$O" -w "code=%{http_code} time=%{time_total}s size=%{size_download}\n" "$2"
+            grep -iE "access-control|content-type|x-ratelimit|retry-after" /tmp/h
+            head -c 400 /tmp/o 2>/dev/null; echo
+          }
+          probe "certspotter letsencrypt.org" "https://api.certspotter.com/v1/issuances?domain=letsencrypt.org&include_subdomains=true&expand=dns_names&expand=issuer" 30
+          probe "certspotter github.io-ish small domain" "https://api.certspotter.com/v1/issuances?domain=sslmate.com&include_subdomains=true&expand=dns_names&expand=issuer" 30
+          python3 - <<'PY'
+          import json
+          d=json.load(open('/tmp/o'))
+          print('certspotter items', len(d)); print(json.dumps(d[0])[:600] if d else '')
+          PY
+          probe "crt.sh small domain sslmate.com unexpired" "https://crt.sh/?q=%25.sslmate.com&output=json&exclude=expired" 120
+          probe "crt.sh small domain sslmate.com full" "https://crt.sh/?q=%25.sslmate.com&output=json" 120
+          probe "crt.sh identity letsencrypt.org" "https://crt.sh/?Identity=letsencrypt.org&output=json&exclude=expired" 120
+          probe "crt.sh OPTIONS preflight" "https://crt.sh/" 20
+          echo done
