@@ -4,8 +4,12 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
 const r = (p) => readFileSync(new URL('../public/' + p, import.meta.url), 'utf8');
 const appUrl = process.env.APP_URL || 'https://perezamadorluisenrique-gif.github.io/cert-radar/';
-const lib = r('lib.js').replace(/^export /gm, '');
-const app = r('app.js').replace(/^import .*$/m, '').replace(/^const DAY = .*$/m, '');
+// Inline the three modules into one script: drop imports and exports, and the
+// duplicate DAY constant.
+const strip = (src) => src.replace(/^import [\s\S]*?from '.*';$/gm, '').replace(/^export /gm, '');
+const lib = strip(r('lib.js'));
+const sources = strip(r('sources.js'));
+const app = strip(r('app.js')).replace(/^const DAY = .*$/m, '');
 const sample = r('sample.json');
 const html = r('index.html');
 const head = html.slice(html.indexOf('<title>'), html.indexOf('<link rel="stylesheet" href="styles.css"'));
@@ -17,6 +21,7 @@ ${body}<script>
 window.CERT_RADAR_EMBED = { appUrl: ${JSON.stringify(appUrl)}, sample: ${sample} };
 (() => {
 ${lib}
+${sources}
 ${app}
 })();
 </script>

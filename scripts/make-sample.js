@@ -73,13 +73,20 @@ manual([`*.${DOMAIN}`, DOMAIN], DIGI, '2022-11-02', { gapMin: 355, gapMax: 365 }
 
 // Hand-renewed long-lived certs: the 2029 problem.
 manual([n('mail')], INC, '2022-09-14');
-manual([n('vpn')], INC, '2022-12-01');
+// Renewed late once: the VPN went 3 days without a valid cert in January 2024.
+cert([n('vpn')], INC, '2022-12-01', 397);
+cert([n('vpn')], INC, '2024-01-05', 397);
+cert([n('vpn')], INC, '2025-02-03', 397);
+cert([n('vpn')], INC, '2026-03-01', 199);
+cert([n('vpn')], INC, '2026-09-14', 199);
 manual([n('sso'), n('idp')], INC, '2023-02-20');
 manual([n('canvas')], DIGI, '2022-08-08');
 manual([n('payroll')], DIGI, '2023-01-11');
 manual([n('portal')], INC, '2022-10-30');
 manual([n('webmail')], INC, '2023-03-03');
-manual([n('print')], SECT, '2022-07-07');
+cert([n('print')], SECT, '2023-07-07', 397);
+cert([n('print')], SECT, '2024-08-14', 397); // 6-day lapse
+cert([n('print')], SECT, '2025-09-10', 397);
 manual([n('wifi'), n('radius')], SECT, '2023-04-04');
 manual([n('erp'), n('erp-test')], DIGI, '2022-06-15');
 manual([n('lab-gateway.engineering')], GODADDY, '2023-05-05', { gapMin: 300, gapMax: 420 });

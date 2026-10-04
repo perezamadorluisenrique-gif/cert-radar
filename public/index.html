@@ -3,8 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.certspotter.com https://crt.sh; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'" />
+  <meta name="referrer" content="no-referrer" />
   <title>47-Day Cert Radar</title>
   <meta name="description" content="Find every public TLS certificate for your domain, spot the ones renewed by hand, and see how much work the 200, 100 and 47-day validity caps will add." />
+  <meta property="og:title" content="47-Day Cert Radar" />
+  <meta property="og:description" content="Every TLS certificate you own, which ones are still renewed by hand, and how much work the 47-day cap adds. Free, no sign-up." />
+  <meta property="og:image" content="https://perezamadorluisenrique-gif.github.io/cert-radar/og.png" />
+  <meta property="og:type" content="website" />
+  <meta name="twitter:card" content="summary_large_image" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='none' stroke='%230f766e' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%230f766e' stroke-width='3'/%3E%3Cpath d='M16 16 L27 7' stroke='%23dc2626' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" />
@@ -13,41 +20,60 @@
 <body>
   <header class="top">
     <div class="wrap">
-      <div class="brand">
+      <a class="brand" href="./">
         <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14"/><circle cx="16" cy="16" r="7"/><path d="M16 16 L27 7"/></svg>
         <span>47-Day Cert Radar</span>
-      </div>
-      <a class="gh" href="https://github.com/perezamadorluisenrique-gif/cert-radar" target="_blank" rel="noopener">Source</a>
+      </a>
+      <nav class="topnav">
+        <a href="#how">How it works</a>
+        <a class="gh" href="https://github.com/perezamadorluisenrique-gif/cert-radar" target="_blank" rel="noopener">Source</a>
+      </nav>
     </div>
   </header>
 
   <main class="wrap">
     <section class="hero">
+      <p class="countdown" id="countdown"></p>
       <h1>Every TLS certificate you own, and when each one breaks.</h1>
       <p class="lede">
         Certificate lifetimes drop to <b>200 days</b> (now), <b>100 days</b> on March 15, 2027 and
-        <b>47 days</b> on March 15, 2029. Enter a domain to pull its history from public Certificate
-        Transparency logs, find the certificates someone still renews by hand, and see what the new caps cost you.
+        <b>47 days</b> on March 15, 2029. Enter a domain to pull its certificates from public Certificate
+        Transparency logs, find the ones someone still renews by hand, and see what the new caps cost you.
       </p>
       <form id="scan" class="scan" autocomplete="off">
         <label class="sr" for="domain">Domain</label>
-        <input id="domain" name="domain" placeholder="yourcompany.com" inputmode="url" spellcheck="false" required />
+        <input id="domain" name="domain" placeholder="yourcompany.com" inputmode="url" spellcheck="false" autocapitalize="off" required />
         <button type="submit" id="go">Scan</button>
       </form>
-      <p class="hint">No sign-up. Nothing is stored. <button type="button" class="link" id="demo">Try the demo university</button></p>
+      <p class="hint">No sign-up. Nothing leaves your browser except the lookup. <button type="button" class="link" id="demo">Try the demo university</button></p>
       <ol id="progress" class="progress" hidden></ol>
       <p id="error" class="error" role="alert" hidden></p>
     </section>
 
+    <section id="board" class="board" hidden>
+      <div class="board-head">
+        <h2>Watched daily</h2>
+        <p class="sub" id="board-sub">Domains in this site's watchlist, scanned every day by GitHub Actions, with live TLS checks.</p>
+      </div>
+      <div id="board-cards" class="board-cards"></div>
+    </section>
+
     <section id="results" hidden>
       <div class="headline card">
-        <div>
-          <p class="kicker" id="hl-domain"></p>
-          <p class="big"><span id="hl-num">0</span></p>
-          <p class="big-label">manual renewals a year by 2029</p>
+        <div class="grade-wrap">
+          <div class="grade" id="grade" aria-label="47-day readiness grade"></div>
+          <p class="grade-label">47-day readiness</p>
         </div>
-        <p class="hl-text" id="hl-text"></p>
+        <div class="hl-main">
+          <p class="kicker" id="hl-domain"></p>
+          <p class="big-line"><span class="big" id="hl-num">0</span><span class="big-label">manual renewals a year by 2029</span></p>
+          <p class="hl-text" id="hl-text"></p>
+          <ul class="grade-notes" id="grade-notes"></ul>
+          <p class="changes" id="changes" hidden></p>
+        </div>
       </div>
+
+      <p class="source-note" id="source-note"></p>
 
       <div class="tiles" id="tiles"></div>
 
@@ -58,15 +84,28 @@
           <div id="forecast" class="chart"></div>
         </div>
         <div class="card">
+          <h2>Your first 47-day year</h2>
+          <p class="sub" id="workload-sub">Manual renewals per month from March 2029, each cert renewed about every 40 days.</p>
+          <div id="workload" class="chart"></div>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="card">
           <h2>Next 12 months</h2>
           <p class="sub">When each live certificate expires. Red ones renew by hand.</p>
           <div id="timeline" class="chart"></div>
+        </div>
+        <div class="card">
+          <h2>Who issues your certificates</h2>
+          <p class="sub">Live certificates by CA. Solid bars are automated issuers.</p>
+          <div id="issuers" class="chart"></div>
         </div>
       </div>
 
       <div class="card" id="attention-card">
         <h2>Needs attention</h2>
-        <p class="sub">Hand-renewed certificates expiring within 30 days, and recently expired ones nobody replaced.</p>
+        <p class="sub">Hand-renewed certificates expiring within 30 days, distrusted certificates, and recently expired ones nobody replaced.</p>
         <ul id="attention" class="attention"></ul>
       </div>
 
@@ -78,8 +117,11 @@
           </div>
           <div class="actions">
             <button type="button" id="live" class="secondary">Check live hosts</button>
-            <button type="button" id="csv" class="secondary">Export CSV</button>
+            <button type="button" id="csv" class="secondary">CSV</button>
             <button type="button" id="ics" class="secondary">Calendar reminders</button>
+            <button type="button" id="json" class="secondary">JSON</button>
+            <button type="button" id="print" class="secondary">Print report</button>
+            <button type="button" id="share" class="secondary">Copy link</button>
           </div>
         </div>
         <div class="filters">
@@ -90,7 +132,7 @@
             <button type="button" data-f="expired">Expired</button>
             <button type="button" data-f="all">All</button>
           </div>
-          <input id="search" type="search" placeholder="Filter by name or CA" />
+          <input id="search" type="search" placeholder="Filter by name, CA or role" aria-label="Filter certificates" />
         </div>
         <p id="live-note" class="note" hidden></p>
         <div class="table-wrap">
@@ -101,7 +143,7 @@
                 <th>CA</th>
                 <th>Renewal</th>
                 <th>Expires</th>
-                <th title="Renewals a year under the 47-day cap">2029/yr</th>
+                <th class="num" title="Renewals a year under the 47-day cap">2029/yr</th>
                 <th>Live</th>
                 <th>Owner</th>
               </tr>
@@ -109,41 +151,69 @@
             <tbody id="rows"></tbody>
           </table>
         </div>
-        <p class="note">Owners are saved in this browser only and included in the CSV and calendar exports.</p>
+        <p class="note">Select a certificate to see its renewal history and how to automate it. Owners are saved in this browser only and included in the exports.</p>
       </div>
     </section>
 
-    <section class="about">
+    <section class="about" id="how">
       <h2>How it works</h2>
       <div class="grid3">
         <div>
           <h3>Discover</h3>
-          <p>Every publicly trusted certificate is logged in Certificate Transparency. Cert Radar queries <a href="https://crt.sh" target="_blank" rel="noopener">crt.sh</a> for the domain and all subdomains, merges precertificate duplicates, and groups renewals of the same name set into one lineage.</p>
+          <p>Every publicly trusted certificate is logged in Certificate Transparency. Cert Radar asks <a href="https://sslmate.com/certspotter/" target="_blank" rel="noopener">Cert Spotter</a> for the certificates valid today, then <a href="https://crt.sh" target="_blank" rel="noopener">crt.sh</a> for the full history when it is available. Renewals of the same set of names are grouped into one lineage.</p>
         </div>
         <div>
           <h3>Classify</h3>
-          <p>A lineage looks <b>manual</b> when it comes from a commercial CA with no ACME history, runs close to the old 398-day maximum, or renews on an irregular rhythm. Let's Encrypt, ZeroSSL, Google Trust Services, Amazon and Cloudflare certs count as automated. These are heuristics; the reasons are shown on every row.</p>
+          <p>A certificate looks <b>manual</b> when it comes from a CA with no sign of ACME use, runs close to the maximum lifetime, renews on an irregular rhythm, or renews at the last minute. Steady renewals well before expiry look automated. Each row shows its reasons.</p>
         </div>
         <div>
           <h3>Forecast</h3>
-          <p>Each manual lineage is projected under the 200, 100 and 47-day caps, assuming renewal about a week before expiry. Unclear lineages count as half. Live checks hand-shake each host to confirm which certificate is actually served.</p>
+          <p>Each manual certificate is projected under the 200, 100 and 47-day caps, renewing about a week before expiry. Unclear ones count as half. The grade weighs the manual share, lapses between expiry and renewal, last-minute habits and anything that needs attention now.</p>
         </div>
       </div>
-      <p class="note">Schedule: CA/Browser Forum Ballot SC-081v3 (April 2025). 200 days from March 15, 2026; 100 days from March 15, 2027; 47 days from March 15, 2029. Domain validation reuse drops to 10 days in 2029.</p>
+      <div class="schedule card">
+        <h3>The SC-081v3 schedule</h3>
+        <div class="table-wrap">
+          <table class="plain">
+            <thead><tr><th>From</th><th class="num">Max certificate lifetime</th><th class="num">Domain validation reuse</th><th class="num">Renewals a year per cert</th></tr></thead>
+            <tbody>
+              <tr><td>Before Mar 15, 2026</td><td class="num">398 days</td><td class="num">398 days</td><td class="num">about 1</td></tr>
+              <tr><td>Mar 15, 2026</td><td class="num">200 days</td><td class="num">200 days</td><td class="num">about 2</td></tr>
+              <tr><td>Mar 15, 2027</td><td class="num">100 days</td><td class="num">100 days</td><td class="num">about 4</td></tr>
+              <tr><td>Mar 15, 2029</td><td class="num">47 days</td><td class="num">10 days</td><td class="num">about 9</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="note">Passed by the CA/Browser Forum in April 2025 with Apple, Google, Mozilla and Microsoft voting in favour. From 2029, every renewal more than 10 days after the last validation needs a fresh DNS or HTTP check.</p>
+      </div>
+      <div class="grid3 more">
+        <div>
+          <h3>Watch your domains for free</h3>
+          <p>Fork the repository, list your domains in <code>watchlist.txt</code>, and GitHub Actions scans them every day, runs live TLS checks and opens an issue when something is about to expire. GitHub emails you about the issue.</p>
+        </div>
+        <div>
+          <h3>Use it in CI</h3>
+          <p><code>node scripts/scan.js example.com --live --fail-under C</code> prints the report and fails the build when readiness drops below a grade. No dependencies.</p>
+        </div>
+        <div>
+          <h3>What it can't see</h3>
+          <p>Certificate Transparency shows what was issued, not what is deployed, and private or internal certificates never appear in it. A commercial CA's ACME service can't be told apart from a manual order, which is why classification is a guess with reasons.</p>
+        </div>
+      </div>
     </section>
   </main>
 
-  <footer class="wrap foot">Built for the 47-day certificate transition. Data from public CT logs; results are estimates.</footer>
+  <footer class="wrap foot">Built for the 47-day certificate transition. Data from public CT logs; results are estimates. <a href="https://github.com/perezamadorluisenrique-gif/cert-radar" target="_blank" rel="noopener">Open source (MIT)</a>.</footer>
 
   <template id="row-tpl">
-    <tr>
-      <td class="name"><span class="primary"></span><span class="more"></span></td>
+    <tr class="row">
+      <td class="name"><button type="button" class="expand" aria-expanded="false"><span class="chev" aria-hidden="true">›</span><span class="primary"></span></button><span class="more"></span><span class="tags"></span></td>
       <td class="ca"></td>
       <td class="auto"><span class="badge"></span></td>
       <td class="exp"><span class="date"></span><span class="left"></span></td>
       <td class="num"></td>
       <td class="livecell"></td>
-      <td><input class="owner" placeholder="Who renews this?" /></td>
+      <td><input class="owner" placeholder="Who renews this?" aria-label="Owner" /></td>
     </tr>
   </template>
 

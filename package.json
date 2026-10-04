@@ -8,6 +8,7 @@
   "engines": { "node": ">=18" },
   "scripts": {
     "dev": "node server.js",
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "test:browser": "node test/browser.mjs"
   }
 }
