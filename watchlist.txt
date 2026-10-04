@@ -1,0 +1,8 @@
+# Domains scanned every day by .github/workflows/pages.yml and shown on the site.
+# One domain per line. Add "alert" after a domain to open a GitHub issue when a
+# certificate on it is within 14 days of expiry or a live host serves a bad cert.
+# GitHub emails you about new issues, so this doubles as free expiry alerts.
+#
+# Replace these examples with your own domains.
+mozilla.org
+wikipedia.org

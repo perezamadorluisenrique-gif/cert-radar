@@ -1,0 +1,53 @@
+name: End-to-end tests on the live site
+
+on:
+  workflow_run:
+    workflows: [Deploy to GitHub Pages]
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      domain:
+        description: Real domain to scan in the smoke test
+        default: sslmate.com
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      BASE: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Playwright
+        run: |
+          npm i --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Wait for the new deploy to be served
+        run: |
+          for i in $(seq 1 30); do
+            if curl -fsS "$BASE/app.js" | cmp -s - public/app.js; then echo "live site matches this commit"; exit 0; fi
+            sleep 10
+          done
+          echo "::warning::live app.js still differs from this commit after 5 minutes"
+      - name: Browser tests (mocked CT sources)
+        run: mkdir -p shots && node test/browser.mjs shots
+      - name: Real scan smoke test
+        run: node test/live-smoke.mjs "${{ github.event.inputs.domain || 'sslmate.com' }}" shots
+      - name: CT source health
+        if: always()
+        run: |
+          for u in "https://api.certspotter.com/v1/issuances?domain=sslmate.com&include_subdomains=true" "https://crt.sh/?q=%25.sslmate.com&output=json&exclude=expired"; do
+            echo "== $u"
+            curl -s -m 60 -o /dev/null -D - -H "Origin: $BASE" -w "code=%{http_code} time=%{time_total}s\n" "$u" | grep -iE "^HTTP|access-control-allow-origin|code=" || true
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots

@@ -3,16 +3,20 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    # Daily watchlist scan (06:17 UTC), then redeploy with fresh snapshots.
+    - cron: '17 6 * * *'
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
+  issues: write
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -26,6 +30,15 @@ jobs:
         with:
           node-version: 22
       - run: npm test
+      - name: Scan the watchlist
+        # A CT outage must never block a deploy; the site shows what it could get.
+        continue-on-error: true
+        timeout-minutes: 20
+        run: node scripts/monitor.js
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CERTSPOTTER_TOKEN: ${{ secrets.CERTSPOTTER_TOKEN }}
+          SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
