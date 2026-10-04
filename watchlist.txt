@@ -5,4 +5,5 @@
 #
 # Replace these examples with your own domains.
 mozilla.org
-wikipedia.org
+python.org
+eff.org

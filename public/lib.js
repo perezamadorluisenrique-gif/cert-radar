@@ -276,6 +276,13 @@ export function buildLineages(certs, now = new Date()) {
       reasons.push('switched away from an automated CA');
     }
 
+    // With a single certificate on record there is no renewal history to judge.
+    // A CA that sells ACME issues the same maximum-length certs either way, so
+    // stay undecided rather than call it manual.
+    if (chain.length < 2 && iss.kind === 'commercial' && iss.acme && score >= 2) {
+      score = 1;
+      reasons.push('only one certificate on record, so renewal habits cannot be checked yet');
+    }
     const automation = score >= 2 ? 'manual' : score <= -2 ? 'automated' : 'unclear';
     const daysLeft = Math.floor((latest.notAfter - now) / DAY);
     const expired = daysLeft < 0;

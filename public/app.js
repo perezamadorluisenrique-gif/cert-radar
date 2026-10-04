@@ -636,7 +636,7 @@ async function loadBoard() {
       return `<button type="button" class="bcard" data-domain="${esc(d.domain)}">
         <span class="bhead"><span class="bdomain">${esc(d.domain)}</span><span class="grade small g-${esc(d.grade === '–' ? 'na' : d.grade)}">${esc(d.grade)}</span></span>
         <span class="bstats"><b>${d.manual}</b> of ${d.live} look manual · <b>${d.manualRenewals2029}</b>/yr by 2029</span>
-        <span class="bstats">${next}${d.liveProblems ? ` · <span class="bad">${plural(d.liveProblems, 'live problem')}</span>` : ''}</span>
+        <span class="bstats">${next}${d.liveProblems ? ` · <span class="bad">${plural(d.liveProblems, 'live problem')}</span>` : ''}${d.scope === 'current' ? ' · current certificates only' : ''}</span>
       </button>`;
     })
     .join('');

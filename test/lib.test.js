@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { analyze, cleanDomain, issuerInfo, normalizeEntries, renewalsPerYear, toCSV, toICS } from '../public/lib.js';
+import { analyze, cleanDomain, diffSnapshots, issuerInfo, normalizeEntries, renewalsPerYear, snapshot, toCSV, toICS } from '../public/lib.js';
 import tlsHandler from '../api/tls.js';
 
 const NOW = new Date('2026-10-03T12:00:00Z');
@@ -68,4 +68,37 @@ test('tls endpoint validates input and refuses private addresses', async () => {
   assert.equal((await call(tlsHandler, '/api/tls?host=')).status, 400);
   const r = await call(tlsHandler, '/api/tls?host=localhost.localdomain.test,127.0.0.1.nip.io');
   for (const x of r.body.results) assert.equal(x.ok, false);
+});
+
+test('a single cert from an ACME-capable CA stays unclear', () => {
+  const now = new Date('2026-10-03T12:00:00Z');
+  const one = (issuer, name) => ({ issuer_name: issuer, name_value: name, not_before: '2026-05-01T00:00:00', not_after: '2026-11-17T00:00:00', serial_number: name });
+  const a = analyze([one('C=GB, O=Sectigo Limited, CN=Sectigo RSA DV', 'a.example.com'), one('C=US, O=GoDaddy.com, Inc., CN=Go Daddy G2', 'b.example.com')], now);
+  const by = Object.fromEntries(a.lineages.map((l) => [l.primary, l.automation]));
+  assert.equal(by['a.example.com'], 'unclear');
+  assert.equal(by['b.example.com'], 'manual');
+});
+
+test('lapses and last-minute renewals are detected', () => {
+  const a = analyze(sample, NOW);
+  const vpn = a.lineages.find((l) => l.primary === 'vpn.stateuniversity.example');
+  assert.equal(vpn.gaps.length, 1);
+  assert.equal(vpn.gaps[0].days, 3);
+  assert.ok(vpn.lastMinute);
+  assert.equal(vpn.role.role, 'VPN or remote access');
+  assert.match(a.readiness.grade, /^[A-F]$/);
+  const news = a.lineages.find((l) => l.primary === 'news.stateuniversity.example');
+  assert.equal(news.automation, 'automated');
+  assert.ok(news.medianLead > 20);
+});
+
+test('snapshots diff by live certificate', () => {
+  const a = analyze(sample, NOW);
+  const s1 = snapshot(a, NOW);
+  const s2 = JSON.parse(JSON.stringify(s1));
+  const [k] = Object.keys(s2.lineages);
+  s2.lineages[k] = '2099-01-01';
+  s2.lineages['new.example'] = '2027-01-01';
+  const d = diffSnapshots(s1, s2);
+  assert.deepEqual([d.added.length, d.renewed.length, d.gone.length], [1, 1, 0]);
 });
