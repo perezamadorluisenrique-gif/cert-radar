@@ -101,6 +101,21 @@ const slim = (e) => ({
   not_after: e.not_after, serial_number: e.serial_number, ...(e.source ? { source: e.source } : {}),
 });
 
+// Cert Spotter's free tier allows a handful of lookups per few minutes. When a domain hits
+// the limit, wait it out once (up to 8 minutes) instead of losing that day's scan.
+async function lookupWithRetry(domain) {
+  try {
+    return await lookup(domain, { token: process.env.CERTSPOTTER_TOKEN });
+  } catch (e) {
+    const m = /rate limit reached(?:, try again in (\d+) min)?/.exec(e.message);
+    if (!m) throw e;
+    const wait = Math.min(Number(m[1] || 2), 8);
+    console.log(`${domain}: rate limited, retrying in ${wait} min`);
+    await new Promise((r) => setTimeout(r, wait * 60000));
+    return lookup(domain, { token: process.env.CERTSPOTTER_TOKEN });
+  }
+}
+
 const watch = readWatchlist();
 mkdirSync(OUT, { recursive: true });
 const siteUrl = process.env.SITE_URL || '';
@@ -110,7 +125,7 @@ let failures = 0;
 for (const w of watch) {
   const t0 = Date.now();
   try {
-    const data = await lookup(w.domain, { token: process.env.CERTSPOTTER_TOKEN });
+    const data = await lookupWithRetry(w.domain);
     const entries = data.entries.slice(0, MAX_ENTRIES);
     const r = analyze(entries);
     const live = await liveCheck(r, { max: 40 });
