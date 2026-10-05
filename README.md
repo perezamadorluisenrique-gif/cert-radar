@@ -87,6 +87,10 @@ test/              node:test unit tests, browser.mjs (Playwright, mocked), live-
 watchlist.txt      domains the daily monitor scans
 ```
 
+## Privacy
+
+No account. The domains you scan go only to the CT sources (Cert Spotter, crt.sh). Visits are counted with [GoatCounter](https://www.goatcounter.com/) (`stats.js`): no cookies, nothing stored on the device, no personal data. It sends only the page path (never the query string, so shared links and anything typed stay private), the referring site and the screen width, and it is skipped when Do Not Track is on.
+
 ## Caveats
 
 - Classification is a heuristic. A commercial CA's ACME service looks the same in CT as a manual order, and a Let's Encrypt certificate can be renewed by someone running certbot by hand. The reasons are shown so a person can judge.

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.certspotter.com https://crt.sh; img-src 'self' data:; base-uri 'none'; form-action 'none'; object-src 'none'" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://api.certspotter.com https://crt.sh https://siuldev5454.goatcounter.com; img-src 'self' data: https://siuldev5454.goatcounter.com; base-uri 'none'; form-action 'none'; object-src 'none'" />
   <meta name="referrer" content="no-referrer" />
   <title>47-Day Cert Radar</title>
   <meta name="description" content="Find every public TLS certificate for your domain, spot the ones renewed by hand, and see how much work the 200, 100 and 47-day validity caps will add." />
@@ -203,7 +203,7 @@
     </section>
   </main>
 
-  <footer class="wrap foot">Built for the 47-day certificate transition. Data from public CT logs; results are estimates. <a href="https://github.com/perezamadorluisenrique-gif/cert-radar" target="_blank" rel="noopener">Open source (MIT)</a>.</footer>
+  <footer class="wrap foot">Built for the 47-day certificate transition. Data from public CT logs; results are estimates. Visits are counted with GoatCounter, without cookies or personal data: it gets only the page address, never the domains you scan. <a href="https://github.com/perezamadorluisenrique-gif/cert-radar" target="_blank" rel="noopener">Open source (MIT)</a>.</footer>
 
   <template id="row-tpl">
     <tr class="row">
@@ -218,5 +218,6 @@
   </template>
 
   <script type="module" src="app.js"></script>
+  <script src="stats.js" defer></script>
 </body>
 </html>
