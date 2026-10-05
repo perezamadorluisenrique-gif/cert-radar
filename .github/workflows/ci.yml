@@ -1,0 +1,38 @@
+name: Pull request checks
+
+# Runs the same gates as the deploy on every pull request, against a local static copy
+# of public/ (the way GitHub Pages serves it), with mocked CT sources.
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Install Playwright
+        run: |
+          npm i --no-save playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Browser tests (static copy, mocked CT sources)
+        run: |
+          python3 -m http.server 3000 -d public >/dev/null 2>&1 &
+          sleep 1
+          mkdir -p shots
+          BASE=http://localhost:3000 node test/browser.mjs shots
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: screenshots
+          path: shots
