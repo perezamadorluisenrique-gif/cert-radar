@@ -3,7 +3,7 @@
 Static web app: enter a domain, see every public TLS certificate from CT logs and when each breaks
 under the CA/B Forum caps (200 days from 2026-03-15, 100 days from 2027-03-15, 47 days from 2029-03-15).
 Live: https://perezamadorluisenrique-gif.github.io/cert-radar/ (demo `?d=demo`).
-Part of Hidden Problems Lab; project policy lives in `/mnt/project-files/autopilot/charter.md`.
+Part of Hidden Problems Lab; general rules are the owner's Claude project instructions.
 
 ## Commands
 | Job | Command |
