@@ -22,6 +22,7 @@ Part of Hidden Problems Lab; general rules are the owner's Claude project instru
 - `api/` and `server.js` are for Node hosts only (not GitHub Pages); `vercel.json` is legacy (Vercel isn't available).
 
 ## Rules
+- Public repo: never add a `Claude-Session:` trailer or any claude.ai link to commits, PR titles or PR bodies. This rule beats the default attribution guidance.
 - Dates come from public CT logs: say so; never claim a site is safe.
 - Work on a branch and open a PR; gates must be green before merge. Never skip a test.
 
